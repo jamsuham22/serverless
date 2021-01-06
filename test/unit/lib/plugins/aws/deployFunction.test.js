@@ -551,31 +551,38 @@ describe('AwsDeployFunction', () => {
 });
 
 describe('test/unit/lib/plugins/aws/deployFunction.test.js', () => {
+  const imageSha = '6bb600b4d6e1d7cf521097177dd0c4e9ea373edb91984a505333be8ac9455d38';
+  const imageWithSha = `000000000000.dkr.ecr.sa-east-1.amazonaws.com/test-lambda-docker@sha256:${imageSha}`;
+  const updateFunctionCodeStub = sinon.stub();
+  const updateFunctionConfigurationStub = sinon.stub();
+  const awsRequestStubMap = {
+    Lambda: {
+      getFunction: {
+        Configuration: {
+          LastModified: '2020-05-20T15:34:16.494+0000',
+        },
+      },
+      updateFunctionCode: updateFunctionCodeStub,
+      updateFunctionConfiguration: updateFunctionConfigurationStub,
+    },
+    STS: {
+      getCallerIdentity: {
+        ResponseMetadata: { RequestId: 'ffffffff-ffff-ffff-ffff-ffffffffffff' },
+        UserId: 'XXXXXXXXXXXXXXXXXXXXX',
+        Account: '999999999999',
+        Arn: 'arn:aws:iam::999999999999:user/test',
+      },
+    },
+  };
+
+  beforeEach(() => {
+    updateFunctionCodeStub.resetHistory();
+    updateFunctionConfigurationStub.resetHistory();
+  });
+
   // This is just a happy-path test of images support. Due to sharing code from `provider.js`
   // all further configurations are tested as a part of `test/unit/lib/plugins/aws/provider.test.js`
   it('should support deploying function that has image defined with sha', async () => {
-    const imageSha = '6bb600b4d6e1d7cf521097177dd0c4e9ea373edb91984a505333be8ac9455d38';
-    const imageWithSha = `000000000000.dkr.ecr.sa-east-1.amazonaws.com/test-lambda-docker@sha256:${imageSha}`;
-    const updateFunctionCodeStub = sinon.stub();
-    const awsRequestStubMap = {
-      Lambda: {
-        getFunction: {
-          Configuration: {
-            LastModified: '2020-05-20T15:34:16.494+0000',
-          },
-        },
-        updateFunctionCode: updateFunctionCodeStub,
-        updateFunctionConfiguration: sinon.stub(),
-      },
-      STS: {
-        getCallerIdentity: {
-          ResponseMetadata: { RequestId: 'ffffffff-ffff-ffff-ffff-ffffffffffff' },
-          UserId: 'XXXXXXXXXXXXXXXXXXXXX',
-          Account: '999999999999',
-          Arn: 'arn:aws:iam::999999999999:user/test',
-        },
-      },
-    };
     await runServerless({
       fixture: 'function',
       cliArgs: ['deploy', 'function', '-f', 'foo'],
